@@ -1,4 +1,4 @@
-m<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -90,6 +90,12 @@ m<!DOCTYPE html>
 
         #btnRandom {
             background: linear-gradient(135deg, #a18cd1, #fbc2eb);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnHome {
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: #fff;
             font-weight: 800;
         }
@@ -240,6 +246,7 @@ m<!DOCTYPE html>
         <button id="btnStart">▶ 開始排序</button>
         <button id="btnReset">↻ 重置</button>
         <button id="btnRandom">🎲 隨機數列</button>
+        <button id="btnHome" onclick="location.href='index.html'">🏠 回首頁</button>
         <div class="speed-control">
             <label for="speed">速度：</label>
             <input type="range" id="speed" min="1" max="10" value="5">
