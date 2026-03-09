@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>氣泡排序法動畫演示</title>
+    <title>排序演算法</title>
     <style>
         * {
             margin: 0;
@@ -12,451 +12,69 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
-            background: #ffffff;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            color: #1a1a2e;
+            justify-content: center;
+            color: #fff;
             padding: 40px 20px;
         }
 
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 8px;
-            color: #0f0c29;
-            font-weight: 800;
-            letter-spacing: -0.5px;
+            margin-bottom: 40px;
+            text-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
         }
 
-        .info {
-            font-size: 1.05rem;
-            color: #666;
-            margin-bottom: 35px;
-            font-weight: 500;
-        }
-
-        .controls {
+        .links {
             display: flex;
-            gap: 12px;
-            margin-bottom: 25px;
             flex-wrap: wrap;
+            gap: 20px;
             justify-content: center;
-            align-items: center;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
-        button {
-            padding: 12px 28px;
-            font-size: 0.95rem;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-        }
-
-        button:active {
-            transform: translateY(-1px);
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        #btnStart {
-            background: linear-gradient(135deg, #00c9ff, #92fe9d);
-            color: #fff;
-            font-weight: 800;
-        }
-
-        #btnReset {
-            background: linear-gradient(135deg, #f7971e, #ffd200);
-            color: #fff;
-            font-weight: 800;
-        }
-
-        #btnRandom {
-            background: linear-gradient(135deg, #a18cd1, #fbc2eb);
-            color: #fff;
-            font-weight: 800;
-        }
-
-        .speed-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        .speed-control input[type="range"] {
-            width: 140px;
-            accent-color: #667eea;
-            cursor: pointer;
-        }
-
-        .status-bar {
-            font-size: 1.1rem;
-            margin-bottom: 25px;
-            min-height: 45px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            text-align: center;
-            min-width: 350px;
-            color: #fff;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
-        }
-
-        .container {
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 5px;
-            height: 420px;
-            padding: 30px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #f0f4f8 100%);
-            border-radius: 20px;
-            border: 2px solid #e0e6f2;
-            width: 90%;
-            max-width: 950px;
-            position: relative;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-        }
-
-        .bar {
+        a.card {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-end;
-            border-radius: 8px 8px 0 0;
-            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                        background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            min-width: 30px;
-            flex: 1;
-            max-width: 65px;
-        }
-
-        .bar .value {
-            position: absolute;
-            top: -30px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #333;
-            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
-        }
-
-        .bar.default {
-            background: linear-gradient(180deg, #667eea, #764ba2);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-
-        .bar.comparing {
-            background: linear-gradient(180deg, #f7971e, #ffd200);
-            transform: scaleX(1.12);
-            box-shadow: 0 0 25px rgba(255, 210, 0, 0.6);
-        }
-
-        .bar.swapping {
-            background: linear-gradient(180deg, #f5576c, #ff6b6b);
-            transform: scaleX(1.18);
-            box-shadow: 0 0 30px rgba(245, 87, 108, 0.7);
-        }
-
-        .bar.sorted {
-            background: linear-gradient(180deg, #00c9ff, #92fe9d);
-            box-shadow: 0 0 20px rgba(146, 254, 157, 0.6);
-        }
-
-        .legend {
-            display: flex;
-            gap: 25px;
-            margin-top: 30px;
-            flex-wrap: wrap;
             justify-content: center;
+            width: 220px;
+            height: 160px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            text-decoration: none;
+            color: #fff;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
         }
 
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.95rem;
-            color: #555;
+        a.card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 8px 30px rgba(146, 254, 157, 0.3);
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        a.card .icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+        a.card .label {
+            font-size: 1.2rem;
             font-weight: 600;
-        }
-
-        .legend-color {
-            width: 18px;
-            height: 18px;
-            border-radius: 4px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .stats {
-            margin-top: 25px;
-            display: flex;
-            gap: 40px;
-            font-size: 1.05rem;
-            color: #555;
-            font-weight: 600;
-        }
-
-        .stats span {
-            font-weight: 800;
-            color: #667eea;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .sorting .status-text {
-            animation: pulse 1s infinite;
         }
     </style>
 </head>
 <body>
-    <h1>🫧 氣泡排序法 Bubble Sort</h1>
-    <p class="info">相鄰元素兩兩比較，較大的往右推，每輪確定一個最大值</p>
-
-    <div class="controls">
-        <button id="btnStart">▶ 開始排序</button>
-        <button id="btnReset">↻ 重置</button>
-        <button id="btnRandom">🎲 隨機數列</button>
-        <div class="speed-control">
-            <label for="speed">速度：</label>
-            <input type="range" id="speed" min="1" max="10" value="5">
-            <span id="speedLabel">5</span>
-        </div>
+    <h1>📚 排序演算法動畫演示</h1>
+    <div class="links">
+        <a class="card" href="bubble_sort.html">
+            <span class="icon">🫧</span>
+            <span class="label">氣泡排序法</span>
+        </a>
     </div>
-
-    <div class="status-bar">
-        <span id="status" class="status-text">點擊「開始排序」觀看動畫演示</span>
-    </div>
-
-    <div class="container" id="container"></div>
-
-    <div class="legend">
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #667eea, #764ba2);"></div>
-            未排序
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #f7971e, #ffd200);"></div>
-            比較中
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #f5576c, #ff6b6b);"></div>
-            交換中
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #00c9ff, #92fe9d);"></div>
-            已排序
-        </div>
-    </div>
-
-    <div class="stats">
-        <div>比較次數：<span id="compareCount">0</span></div>
-        <div>交換次數：<span id="swapCount">0</span></div>
-        <div>目前輪次：<span id="round">0</span></div>
-    </div>
-
-    <script>
-        let array = [];
-        let sorting = false;
-        let stopFlag = false;
-        const MAX_VAL = 100;
-        const DEFAULT_SIZE = 20;
-
-        const container = document.getElementById('container');
-        const status = document.getElementById('status');
-        const btnStart = document.getElementById('btnStart');
-        const btnReset = document.getElementById('btnReset');
-        const btnRandom = document.getElementById('btnRandom');
-        const speedSlider = document.getElementById('speed');
-        const speedLabel = document.getElementById('speedLabel');
-        const compareCountEl = document.getElementById('compareCount');
-        const swapCountEl = document.getElementById('swapCount');
-        const roundEl = document.getElementById('round');
-
-        let compareCount = 0;
-        let swapCount = 0;
-
-        speedSlider.addEventListener('input', () => {
-            speedLabel.textContent = speedSlider.value;
-        });
-
-        function getDelay() {
-            return 600 - (speedSlider.value - 1) * 60;
-        }
-
-        function generateArray(size) {
-            const arr = [];
-            for (let i = 0; i < size; i++) {
-                arr.push(Math.floor(Math.random() * MAX_VAL) + 1);
-            }
-            return arr;
-        }
-
-        function renderBars(highlights = {}) {
-            container.innerHTML = '';
-            const maxH = 370;
-            array.forEach((val, idx) => {
-                const bar = document.createElement('div');
-                bar.className = 'bar';
-                const h = (val / MAX_VAL) * maxH;
-                bar.style.height = h + 'px';
-
-                if (highlights.sorted && highlights.sorted.has(idx)) {
-                    bar.classList.add('sorted');
-                } else if (highlights.swapping && highlights.swapping.has(idx)) {
-                    bar.classList.add('swapping');
-                } else if (highlights.comparing && highlights.comparing.has(idx)) {
-                    bar.classList.add('comparing');
-                } else {
-                    bar.classList.add('default');
-                }
-
-                const valLabel = document.createElement('div');
-                valLabel.className = 'value';
-                valLabel.textContent = val;
-                bar.appendChild(valLabel);
-
-                container.appendChild(bar);
-            });
-        }
-
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        async function bubbleSort() {
-            sorting = true;
-            stopFlag = false;
-            btnStart.disabled = true;
-            btnRandom.disabled = true;
-            compareCount = 0;
-            swapCount = 0;
-            document.body.classList.add('sorting');
-
-            const n = array.length;
-            const sortedSet = new Set();
-
-            for (let i = 0; i < n - 1; i++) {
-                if (stopFlag) break;
-                roundEl.textContent = i + 1;
-                let swapped = false;
-
-                for (let j = 0; j < n - 1 - i; j++) {
-                    if (stopFlag) break;
-
-                    // 比較
-                    compareCount++;
-                    compareCountEl.textContent = compareCount;
-                    status.textContent = `第 ${i + 1} 輪：比較 arr[${j}]=${array[j]} 和 arr[${j + 1}]=${array[j + 1]}`;
-                    renderBars({ comparing: new Set([j, j + 1]), sorted: sortedSet });
-                    await sleep(getDelay());
-
-                    if (array[j] > array[j + 1]) {
-                        // 交換
-                        status.textContent = `交換 ${array[j]} 和 ${array[j + 1]}`;
-                        renderBars({ swapping: new Set([j, j + 1]), sorted: sortedSet });
-                        await sleep(getDelay());
-
-                        [array[j], array[j + 1]] = [array[j + 1], array[j]];
-                        swapCount++;
-                        swapCountEl.textContent = swapCount;
-                        swapped = true;
-
-                        renderBars({ swapping: new Set([j, j + 1]), sorted: sortedSet });
-                        await sleep(getDelay() * 0.5);
-                    }
-                }
-
-                sortedSet.add(n - 1 - i);
-                renderBars({ sorted: sortedSet });
-                await sleep(getDelay() * 0.3);
-
-                if (!swapped) {
-                    // 提前結束
-                    for (let k = 0; k < n; k++) sortedSet.add(k);
-                    renderBars({ sorted: sortedSet });
-                    status.textContent = `✅ 排序完成！第 ${i + 1} 輪無交換，提前結束`;
-                    break;
-                }
-            }
-
-            if (!stopFlag) {
-                for (let k = 0; k < n; k++) sortedSet.add(k);
-                renderBars({ sorted: sortedSet });
-                if (!status.textContent.includes('提前結束')) {
-                    status.textContent = `✅ 排序完成！共 ${compareCount} 次比較、${swapCount} 次交換`;
-                }
-            }
-
-            document.body.classList.remove('sorting');
-            sorting = false;
-            btnStart.disabled = false;
-            btnRandom.disabled = false;
-        }
-
-        function reset() {
-            stopFlag = true;
-            sorting = false;
-            btnStart.disabled = false;
-            btnRandom.disabled = false;
-            compareCount = 0;
-            swapCount = 0;
-            compareCountEl.textContent = 0;
-            swapCountEl.textContent = 0;
-            roundEl.textContent = 0;
-            array = generateArray(DEFAULT_SIZE);
-            renderBars();
-            status.textContent = '點擊「開始排序」觀看動畫演示';
-            document.body.classList.remove('sorting');
-        }
-
-        btnStart.addEventListener('click', () => {
-            if (!sorting) {
-                bubbleSort();
-            }
-        });
-
-        btnReset.addEventListener('click', reset);
-
-        btnRandom.addEventListener('click', () => {
-            if (!sorting) {
-                array = generateArray(DEFAULT_SIZE);
-                compareCount = 0;
-                swapCount = 0;
-                compareCountEl.textContent = 0;
-                swapCountEl.textContent = 0;
-                roundEl.textContent = 0;
-                renderBars();
-                status.textContent = '已產生新的隨機數列，點擊「開始排序」開始';
-            }
-        });
-
-        // 初始化
-        array = generateArray(DEFAULT_SIZE);
-        renderBars();
-    </script>
 </body>
 </html>
