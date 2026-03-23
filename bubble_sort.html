@@ -82,6 +82,24 @@
             font-weight: 800;
         }
 
+        #btnPause {
+            background: linear-gradient(135deg, #5c6bc0, #8e99f3);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnStep {
+            background: linear-gradient(135deg, #26c6da, #00acc1);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnRoundStep {
+            background: linear-gradient(135deg, #42a5f5, #478ed1);
+            color: #fff;
+            font-weight: 800;
+        }
+
         #btnReset {
             background: linear-gradient(135deg, #f7971e, #ffd200);
             color: #fff;
@@ -90,6 +108,18 @@
 
         #btnRandom {
             background: linear-gradient(135deg, #a18cd1, #fbc2eb);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnReverse {
+            background: linear-gradient(135deg, #ef5350, #e53935);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnNearly {
+            background: linear-gradient(135deg, #66bb6a, #43a047);
             color: #fff;
             font-weight: 800;
         }
@@ -126,6 +156,28 @@
             color: #fff;
             font-weight: 600;
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+        }
+
+        .mode-bar {
+            width: 90%;
+            max-width: 950px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .mode-card {
+            padding: 14px 18px;
+            background: #f8f9fa;
+            border: 1px solid #e0e6f2;
+            border-radius: 12px;
+            color: #444;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+        }
+
+        .mode-card strong {
+            color: #1a1a2e;
         }
 
         .container {
@@ -198,6 +250,30 @@
             justify-content: center;
         }
 
+        .guide {
+            width: 90%;
+            max-width: 950px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        .guide-item {
+            background: #f8f9fa;
+            border: 1px solid #e0e6f2;
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+        }
+
+        .guide-item strong {
+            color: #1a1a2e;
+        }
+
         .legend-item {
             display: flex;
             align-items: center;
@@ -260,6 +336,23 @@
             transform: translateY(-3px);
             box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
         }
+
+        @media (max-width: 768px) {
+            .status-bar {
+                min-width: auto;
+                width: 90%;
+            }
+
+            .mode-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                gap: 20px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -270,9 +363,14 @@
     <p class="info">相鄰元素兩兩比較，較大的往右推，每輪確定一個最大值</p>
 
     <div class="controls">
-        <button id="btnStart">▶ 開始排序</button>
+        <button id="btnStart">▶ 自動播放</button>
+        <button id="btnPause" disabled>⏸ 暫停</button>
+        <button id="btnStep">👣 單步</button>
+        <button id="btnRoundStep">⏭ 下一輪</button>
         <button id="btnReset">↻ 重置</button>
         <button id="btnRandom">🎲 隨機數列</button>
+        <button id="btnReverse">📉 反向範例</button>
+        <button id="btnNearly">✨ 幾乎排序</button>
         <div class="speed-control">
             <label for="speed">速度：</label>
             <input type="range" id="speed" min="1" max="10" value="5">
@@ -281,7 +379,19 @@
     </div>
 
     <div class="status-bar">
-        <span id="status" class="status-text">點擊「開始排序」觀看動畫演示</span>
+        <span id="status" class="status-text">點擊「自動播放」或「單步」觀看動畫演示</span>
+    </div>
+
+    <div class="mode-bar">
+        <div class="mode-card">目前模式：<strong id="modeLabel">待機</strong></div>
+        <div class="mode-card">教學提示：<strong id="tipLabel">可用單步、下一輪與範例數列觀察排序差異</strong></div>
+    </div>
+
+    <div class="guide">
+        <div class="guide-item"><strong>👣 單步</strong><br>一次只前進一個比較或交換，適合慢慢看每個動作。</div>
+        <div class="guide-item"><strong>⏭ 下一輪</strong><br>直接跑完整一輪，比較每輪結束後哪些位置被固定。</div>
+        <div class="guide-item"><strong>📉 反向範例</strong><br>載入接近最亂的資料，觀察交換次數明顯增加。</div>
+        <div class="guide-item"><strong>✨ 幾乎排序</strong><br>適合觀察氣泡排序的提早結束特性。</div>
     </div>
 
     <div class="container" id="container"></div>
@@ -313,24 +423,33 @@
 
     <script>
         let array = [];
-        let sorting = false;
-        let stopFlag = false;
+        let compareCount = 0;
+        let swapCount = 0;
+        let steps = [];
+        let currentStepIndex = -1;
+        let playing = false;
+        let playbackTimer = null;
+
         const MAX_VAL = 100;
         const DEFAULT_SIZE = 20;
 
         const container = document.getElementById('container');
         const status = document.getElementById('status');
         const btnStart = document.getElementById('btnStart');
+        const btnPause = document.getElementById('btnPause');
+        const btnStep = document.getElementById('btnStep');
+        const btnRoundStep = document.getElementById('btnRoundStep');
         const btnReset = document.getElementById('btnReset');
         const btnRandom = document.getElementById('btnRandom');
+        const btnReverse = document.getElementById('btnReverse');
+        const btnNearly = document.getElementById('btnNearly');
         const speedSlider = document.getElementById('speed');
         const speedLabel = document.getElementById('speedLabel');
         const compareCountEl = document.getElementById('compareCount');
         const swapCountEl = document.getElementById('swapCount');
         const roundEl = document.getElementById('round');
-
-        let compareCount = 0;
-        let swapCount = 0;
+        const modeLabel = document.getElementById('modeLabel');
+        const tipLabel = document.getElementById('tipLabel');
 
         speedSlider.addEventListener('input', () => {
             speedLabel.textContent = speedSlider.value;
@@ -348,20 +467,40 @@
             return arr;
         }
 
+        function generateSortedArray(size) {
+            return Array.from({ length: size }, (_, index) => Math.round(((index + 1) / size) * MAX_VAL));
+        }
+
+        function generateReverseArray(size) {
+            return generateSortedArray(size).reverse();
+        }
+
+        function generateNearlySortedArray(size) {
+            const arr = generateSortedArray(size);
+            if (size > 4) {
+                [arr[2], arr[3]] = [arr[3], arr[2]];
+                [arr[size - 4], arr[size - 2]] = [arr[size - 2], arr[size - 4]];
+            }
+            return arr;
+        }
+
         function renderBars(highlights = {}) {
             container.innerHTML = '';
             const maxH = 370;
+            const sortedSet = highlights.sorted || new Set();
+            const comparingSet = highlights.comparing || new Set();
+            const swappingSet = highlights.swapping || new Set();
+
             array.forEach((val, idx) => {
                 const bar = document.createElement('div');
                 bar.className = 'bar';
-                const h = (val / MAX_VAL) * maxH;
-                bar.style.height = h + 'px';
+                bar.style.height = (val / MAX_VAL) * maxH + 'px';
 
-                if (highlights.sorted && highlights.sorted.has(idx)) {
+                if (sortedSet.has(idx)) {
                     bar.classList.add('sorted');
-                } else if (highlights.swapping && highlights.swapping.has(idx)) {
+                } else if (swappingSet.has(idx)) {
                     bar.classList.add('swapping');
-                } else if (highlights.comparing && highlights.comparing.has(idx)) {
+                } else if (comparingSet.has(idx)) {
                     bar.classList.add('comparing');
                 } else {
                     bar.classList.add('default');
@@ -371,125 +510,342 @@
                 valLabel.className = 'value';
                 valLabel.textContent = val;
                 bar.appendChild(valLabel);
-
                 container.appendChild(bar);
             });
         }
 
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+        function buildStep({ arr, statusText, round, sortedSet, comparingSet, swappingSet, phase, compareTotal, swapTotal }) {
+            return {
+                array: [...arr],
+                statusText,
+                round,
+                phase,
+                compareTotal,
+                swapTotal,
+                highlights: {
+                    sorted: [...sortedSet],
+                    comparing: [...comparingSet],
+                    swapping: [...swappingSet]
+                }
+            };
         }
 
-        async function bubbleSort() {
-            sorting = true;
-            stopFlag = false;
-            btnStart.disabled = true;
-            btnRandom.disabled = true;
-            compareCount = 0;
-            swapCount = 0;
-            document.body.classList.add('sorting');
-
-            const n = array.length;
+        function generateBubbleSteps(sourceArray) {
+            const arr = [...sourceArray];
+            const generatedSteps = [];
             const sortedSet = new Set();
+            const n = arr.length;
+            let compareTotal = 0;
+            let swapTotal = 0;
+            let endedEarly = false;
 
             for (let i = 0; i < n - 1; i++) {
-                if (stopFlag) break;
-                roundEl.textContent = i + 1;
                 let swapped = false;
 
+                generatedSteps.push(buildStep({
+                    arr,
+                    statusText: `第 ${i + 1} 輪開始：從左到右比較相鄰元素`,
+                    round: i + 1,
+                    sortedSet,
+                    comparingSet: new Set(),
+                    swappingSet: new Set(),
+                    phase: 'normal',
+                    compareTotal,
+                    swapTotal
+                }));
+
                 for (let j = 0; j < n - 1 - i; j++) {
-                    if (stopFlag) break;
+                    compareTotal++;
+                    generatedSteps.push(buildStep({
+                        arr,
+                        statusText: `第 ${i + 1} 輪：比較 arr[${j}]=${arr[j]} 和 arr[${j + 1}]=${arr[j + 1]}`,
+                        round: i + 1,
+                        sortedSet,
+                        comparingSet: new Set([j, j + 1]),
+                        swappingSet: new Set(),
+                        phase: 'normal',
+                        compareTotal,
+                        swapTotal
+                    }));
 
-                    // 比較
-                    compareCount++;
-                    compareCountEl.textContent = compareCount;
-                    status.textContent = `第 ${i + 1} 輪：比較 arr[${j}]=${array[j]} 和 arr[${j + 1}]=${array[j + 1]}`;
-                    renderBars({ comparing: new Set([j, j + 1]), sorted: sortedSet });
-                    await sleep(getDelay());
+                    if (arr[j] > arr[j + 1]) {
+                        generatedSteps.push(buildStep({
+                            arr,
+                            statusText: `準備交換 ${arr[j]} 和 ${arr[j + 1]}`,
+                            round: i + 1,
+                            sortedSet,
+                            comparingSet: new Set(),
+                            swappingSet: new Set([j, j + 1]),
+                            phase: 'normal',
+                            compareTotal,
+                            swapTotal
+                        }));
 
-                    if (array[j] > array[j + 1]) {
-                        // 交換
-                        status.textContent = `交換 ${array[j]} 和 ${array[j + 1]}`;
-                        renderBars({ swapping: new Set([j, j + 1]), sorted: sortedSet });
-                        await sleep(getDelay());
-
-                        [array[j], array[j + 1]] = [array[j + 1], array[j]];
-                        swapCount++;
-                        swapCountEl.textContent = swapCount;
+                        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+                        swapTotal++;
                         swapped = true;
 
-                        renderBars({ swapping: new Set([j, j + 1]), sorted: sortedSet });
-                        await sleep(getDelay() * 0.5);
+                        generatedSteps.push(buildStep({
+                            arr,
+                            statusText: `交換完成：較大的值被推向右側`,
+                            round: i + 1,
+                            sortedSet,
+                            comparingSet: new Set(),
+                            swappingSet: new Set([j, j + 1]),
+                            phase: 'normal',
+                            compareTotal,
+                            swapTotal
+                        }));
                     }
                 }
 
                 sortedSet.add(n - 1 - i);
-                renderBars({ sorted: sortedSet });
-                await sleep(getDelay() * 0.3);
+                generatedSteps.push(buildStep({
+                    arr,
+                    statusText: `第 ${i + 1} 輪完成：最右邊的第 ${i + 1} 個位置已確定`,
+                    round: i + 1,
+                    sortedSet,
+                    comparingSet: new Set(),
+                    swappingSet: new Set(),
+                    phase: 'round-end',
+                    compareTotal,
+                    swapTotal
+                }));
 
                 if (!swapped) {
-                    // 提前結束
-                    for (let k = 0; k < n; k++) sortedSet.add(k);
-                    renderBars({ sorted: sortedSet });
-                    status.textContent = `✅ 排序完成！第 ${i + 1} 輪無交換，提前結束`;
+                    for (let k = 0; k < n; k++) {
+                        sortedSet.add(k);
+                    }
+                    generatedSteps.push(buildStep({
+                        arr,
+                        statusText: `✅ 排序完成！第 ${i + 1} 輪沒有交換，代表陣列已經有序`,
+                        round: i + 1,
+                        sortedSet,
+                        comparingSet: new Set(),
+                        swappingSet: new Set(),
+                        phase: 'complete',
+                        compareTotal,
+                        swapTotal
+                    }));
+                    endedEarly = true;
                     break;
                 }
             }
 
-            if (!stopFlag) {
-                for (let k = 0; k < n; k++) sortedSet.add(k);
-                renderBars({ sorted: sortedSet });
-                if (!status.textContent.includes('提前結束')) {
-                    status.textContent = `✅ 排序完成！共 ${compareCount} 次比較、${swapCount} 次交換`;
+            if (!endedEarly) {
+                for (let k = 0; k < n; k++) {
+                    sortedSet.add(k);
                 }
+                generatedSteps.push(buildStep({
+                    arr,
+                    statusText: `✅ 排序完成！共 ${compareTotal} 次比較、${swapTotal} 次交換`,
+                    round: Math.max(n - 1, 1),
+                    sortedSet,
+                    comparingSet: new Set(),
+                    swappingSet: new Set(),
+                    phase: 'complete',
+                    compareTotal,
+                    swapTotal
+                }));
             }
 
-            document.body.classList.remove('sorting');
-            sorting = false;
-            btnStart.disabled = false;
-            btnRandom.disabled = false;
+            return generatedSteps;
         }
 
-        function reset() {
-            stopFlag = true;
-            sorting = false;
-            btnStart.disabled = false;
-            btnRandom.disabled = false;
+        function setMode(modeText, tipText) {
+            modeLabel.textContent = modeText;
+            tipLabel.textContent = tipText;
+        }
+
+        function updateStats() {
+            compareCountEl.textContent = compareCount;
+            swapCountEl.textContent = swapCount;
+        }
+
+        function clearPlaybackTimer() {
+            if (playbackTimer) {
+                clearTimeout(playbackTimer);
+                playbackTimer = null;
+            }
+        }
+
+        function syncControls() {
+            const hasSteps = steps.length > 0;
+            const atEnd = hasSteps && currentStepIndex >= steps.length - 1;
+
+            btnStart.disabled = playing || atEnd;
+            btnPause.disabled = !hasSteps || currentStepIndex < 0 || atEnd;
+            btnPause.textContent = playing ? '⏸ 暫停' : '▶ 繼續';
+            btnStep.disabled = playing || atEnd;
+            btnRoundStep.disabled = playing || atEnd;
+            btnRandom.disabled = playing;
+            btnReverse.disabled = playing;
+            btnNearly.disabled = playing;
+        }
+
+        function applyStep(index) {
+            const step = steps[index];
+            currentStepIndex = index;
+            array = [...step.array];
+            compareCount = step.compareTotal;
+            swapCount = step.swapTotal;
+            roundEl.textContent = step.round;
+            status.textContent = step.statusText;
+            updateStats();
+            renderBars({
+                sorted: new Set(step.highlights.sorted),
+                comparing: new Set(step.highlights.comparing),
+                swapping: new Set(step.highlights.swapping)
+            });
+            syncControls();
+        }
+
+        function ensureSteps() {
+            if (steps.length === 0) {
+                steps = generateBubbleSteps(array);
+            }
+        }
+
+        function finishPlayback() {
+            playing = false;
+            clearPlaybackTimer();
+            document.body.classList.remove('sorting');
+
+            if (steps.length > 0 && currentStepIndex >= steps.length - 1) {
+                setMode('已完成', '可重置、切換範例或重新單步觀察');
+            }
+
+            syncControls();
+        }
+
+        function scheduleNextStep() {
+            if (!playing) {
+                return;
+            }
+
+            if (currentStepIndex >= steps.length - 1) {
+                finishPlayback();
+                return;
+            }
+
+            applyStep(currentStepIndex + 1);
+
+            if (currentStepIndex >= steps.length - 1) {
+                finishPlayback();
+                return;
+            }
+
+            clearPlaybackTimer();
+            playbackTimer = setTimeout(scheduleNextStep, getDelay());
+        }
+
+        function startPlayback() {
+            ensureSteps();
+            if (currentStepIndex >= steps.length - 1) {
+                return;
+            }
+
+            playing = true;
+            document.body.classList.add('sorting');
+            setMode('自動播放', '排序會依照目前速度持續前進，可隨時暫停');
+            syncControls();
+            scheduleNextStep();
+        }
+
+        function pausePlayback() {
+            playing = false;
+            clearPlaybackTimer();
+            document.body.classList.remove('sorting');
+            setMode('手動暫停', '可按單步或下一輪繼續分析當前流程');
+            syncControls();
+        }
+
+        function stepOnce() {
+            if (playing) {
+                return;
+            }
+
+            ensureSteps();
+            if (currentStepIndex >= steps.length - 1) {
+                return;
+            }
+
+            applyStep(currentStepIndex + 1);
+
+            if (currentStepIndex >= steps.length - 1) {
+                finishPlayback();
+            } else {
+                setMode('手動單步', '一次只推進一個比較或交換動作');
+                syncControls();
+            }
+        }
+
+        function stepRound() {
+            if (playing) {
+                return;
+            }
+
+            ensureSteps();
+            if (currentStepIndex >= steps.length - 1) {
+                return;
+            }
+
+            do {
+                applyStep(currentStepIndex + 1);
+            } while (currentStepIndex < steps.length - 1 && steps[currentStepIndex].phase !== 'round-end' && steps[currentStepIndex].phase !== 'complete');
+
+            if (currentStepIndex >= steps.length - 1) {
+                finishPlayback();
+            } else {
+                setMode('逐輪觀察', '已推進到本輪結束，可比較哪些位置已固定');
+                syncControls();
+            }
+        }
+
+        function loadDataset(newArray, message, tipText) {
+            playing = false;
+            clearPlaybackTimer();
+            document.body.classList.remove('sorting');
+
+            array = [...newArray];
+            steps = [];
+            currentStepIndex = -1;
             compareCount = 0;
             swapCount = 0;
-            compareCountEl.textContent = 0;
-            swapCountEl.textContent = 0;
             roundEl.textContent = 0;
-            array = generateArray(DEFAULT_SIZE);
+            status.textContent = message;
+            updateStats();
             renderBars();
-            status.textContent = '點擊「開始排序」觀看動畫演示';
-            document.body.classList.remove('sorting');
+            setMode('待機', tipText);
+            syncControls();
         }
 
-        btnStart.addEventListener('click', () => {
-            if (!sorting) {
-                bubbleSort();
+        btnStart.addEventListener('click', startPlayback);
+
+        btnPause.addEventListener('click', () => {
+            if (playing) {
+                pausePlayback();
+            } else {
+                startPlayback();
             }
         });
 
-        btnReset.addEventListener('click', reset);
-
+        btnStep.addEventListener('click', stepOnce);
+        btnRoundStep.addEventListener('click', stepRound);
+        btnReset.addEventListener('click', () => {
+            loadDataset(generateArray(DEFAULT_SIZE), '點擊「自動播放」或「單步」觀看動畫演示', '可用單步、下一輪與範例數列觀察排序差異');
+        });
         btnRandom.addEventListener('click', () => {
-            if (!sorting) {
-                array = generateArray(DEFAULT_SIZE);
-                compareCount = 0;
-                swapCount = 0;
-                compareCountEl.textContent = 0;
-                swapCountEl.textContent = 0;
-                roundEl.textContent = 0;
-                renderBars();
-                status.textContent = '已產生新的隨機數列，點擊「開始排序」開始';
-            }
+            loadDataset(generateArray(DEFAULT_SIZE), '已產生新的隨機數列，可用單步或下一輪開始觀察', '先用單步理解，再切自動播放對照節奏');
+        });
+        btnReverse.addEventListener('click', () => {
+            loadDataset(generateReverseArray(DEFAULT_SIZE), '已載入反向範例：這類資料通常會造成較多交換', '適合觀察氣泡排序如何把大值一路往右推');
+        });
+        btnNearly.addEventListener('click', () => {
+            loadDataset(generateNearlySortedArray(DEFAULT_SIZE), '已載入幾乎排序範例：可特別注意是否提早結束', '這組資料很適合看出氣泡排序的提早結束優勢');
         });
 
-        // 初始化
-        array = generateArray(DEFAULT_SIZE);
-        renderBars();
+        loadDataset(generateArray(DEFAULT_SIZE), '點擊「自動播放」或「單步」觀看動畫演示', '可用單步、下一輪與範例數列觀察排序差異');
     </script>
 </body>
 </html>
