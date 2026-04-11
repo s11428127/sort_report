@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>堆積排序法動畫演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #1a1a2e;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            color: #0f0c29;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .info {
+            font-size: 1.05rem;
+            color: #666;
+            margin-bottom: 35px;
+            font-weight: 500;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        button {
+            padding: 12px 28px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #btnStart {
+            background: linear-gradient(135deg, #00c9ff, #92fe9d);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnPause {
+            background: linear-gradient(135deg, #5c6bc0, #8e99f3);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnStep {
+            background: linear-gradient(135deg, #26c6da, #00acc1);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnRoundStep {
+            background: linear-gradient(135deg, #42a5f5, #478ed1);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnReset {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnRandom {
+            background: linear-gradient(135deg, #a18cd1, #fbc2eb);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnReverse {
+            background: linear-gradient(135deg, #ef5350, #e53935);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #btnNearly {
+            background: linear-gradient(135deg, #66bb6a, #43a047);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .speed-control input[type="range"] {
+            width: 140px;
+            accent-color: #667eea;
+            cursor: pointer;
+        }
+
+        .status-bar {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            min-height: 45px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            text-align: center;
+            min-width: 350px;
+            color: #fff;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+        }
+
+        .mode-bar {
+            width: 90%;
+            max-width: 950px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .mode-card {
+            padding: 14px 18px;
+            background: #f8f9fa;
+            border: 1px solid #e0e6f2;
+            border-radius: 12px;
+            color: #444;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+        }
+
+        .mode-card strong {
+            color: #1a1a2e;
+        }
+
+        .container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 5px;
+            height: 420px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #f0f4f8 100%);
+            border-radius: 20px;
+            border: 2px solid #e0e6f2;
+            width: 90%;
+            max-width: 950px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            border-radius: 8px 8px 0 0;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                        background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            min-width: 30px;
+            flex: 1;
+            max-width: 65px;
+        }
+
+        .bar .value {
+            position: absolute;
+            top: -30px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #333;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .bar.default {
+            background: linear-gradient(180deg, #667eea, #764ba2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .bar.comparing {
+            background: linear-gradient(180deg, #f7971e, #ffd200);
+            transform: scaleX(1.12);
+            box-shadow: 0 0 25px rgba(255, 210, 0, 0.6);
+        }
+
+        .bar.current {
+            background: linear-gradient(180deg, #36d1dc, #5b86e5);
+            transform: scaleX(1.15);
+            box-shadow: 0 0 26px rgba(91, 134, 229, 0.62);
+        }
+
+        .bar.swapping {
+            background: linear-gradient(180deg, #f5576c, #ff6b6b);
+            transform: scaleX(1.18);
+            box-shadow: 0 0 30px rgba(245, 87, 108, 0.7);
+        }
+
+        .bar.sorted {
+            background: linear-gradient(180deg, #00c9ff, #92fe9d);
+            box-shadow: 0 0 20px rgba(146, 254, 157, 0.6);
+        }
+
+        .legend {
+            display: flex;
+            gap: 25px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .guide {
+            width: 90%;
+            max-width: 950px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        .guide-item {
+            background: #f8f9fa;
+            border: 1px solid #e0e6f2;
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+        }
+
+        .guide-item strong {
+            color: #1a1a2e;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats {
+            margin-top: 25px;
+            display: flex;
+            gap: 40px;
+            font-size: 1.05rem;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .stats span {
+            font-weight: 800;
+            color: #667eea;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .sorting .status-text {
+            animation: pulse 1s infinite;
+        }
+
+        .top-nav {
+            width: 100%;
+            max-width: 950px;
+            margin-bottom: 20px;
+        }
+
+        .top-nav a {
+            display: inline-block;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .top-nav a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .status-bar {
+                min-width: auto;
+                width: 90%;
+            }
+
+            .mode-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                gap: 20px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <a href="index.html">🏠 回首頁</a>
+    </div>
+    <h1>🏗 堆積排序法 Heap Sort</h1>
+    <p class="info">先建立最大堆積，再將堆頂最大值逐步交換到陣列尾端</p>
+
+    <div class="controls">
+        <button id="btnStart">▶ 自動播放</button>
+        <button id="btnPause" disabled>⏸ 暫停</button>
+        <button id="btnStep">👣 單步</button>
+        <button id="btnRoundStep">⏭ 下一輪</button>
+        <button id="btnReset">↻ 重置</button>
+        <button id="btnRandom">🎲 隨機數列</button>
+        <button id="btnReverse">📉 反向範例</button>
+        <button id="btnNearly">✨ 幾乎排序</button>
+        <div class="speed-control">
+            <label for="speed">速度：</label>
+            <input type="range" id="speed" min="1" max="10" value="5">
+            <span id="speedLabel">5</span>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="status" class="status-text">點擊「自動播放」或「單步」觀看動畫演示</span>
+    </div>
+
+    <div class="mode-bar">
+        <div class="mode-card">目前模式：<strong id="modeLabel">待機</strong></div>
+        <div class="mode-card">教學提示：<strong id="tipLabel">先觀察建堆，再看最大值被交換到尾端</strong></div>
+    </div>
+
+    <div class="guide">
+        <div class="guide-item"><strong>👣 單步</strong><br>一次看一個節點比較或交換。</div>
+        <div class="guide-item"><strong>⏭ 下一輪</strong><br>直接完成一次建堆或一次取最大值流程。</div>
+        <div class="guide-item"><strong>📉 反向範例</strong><br>可觀察最大堆如何快速把大值拉到頂端。</div>
+        <div class="guide-item"><strong>✨ 幾乎排序</strong><br>堆積排序仍會執行固定的堆化步驟。</div>
+    </div>
+
+    <div class="container" id="container"></div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #667eea, #764ba2);"></div>
+            堆積區
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #f7971e, #ffd200);"></div>
+            比較中
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #36d1dc, #5b86e5);"></div>
+            堆頂/候選
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #f5576c, #ff6b6b);"></div>
+            交換中
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #00c9ff, #92fe9d);"></div>
+            已排序尾端
+        </div>
+    </div>
+
+    <div class="stats">
+        <div>比較次數：<span id="compareCount">0</span></div>
+        <div>交換次數：<span id="swapCount">0</span></div>
+        <div>目前輪次：<span id="round">0</span></div>
+    </div>
+
+    <script>
+        let array = [];
+        let compareCount = 0;
+        let swapCount = 0;
+        let steps = [];
+        let currentStepIndex = -1;
+        let playing = false;
+        let playbackTimer = null;
+
+        const MAX_VAL = 100;
+        const DEFAULT_SIZE = 20;
+
+        const container = document.getElementById('container');
+        const status = document.getElementById('status');
+        const btnStart = document.getElementById('btnStart');
+        const btnPause = document.getElementById('btnPause');
+        const btnStep = document.getElementById('btnStep');
+        const btnRoundStep = document.getElementById('btnRoundStep');
+        const btnReset = document.getElementById('btnReset');
+        const btnRandom = document.getElementById('btnRandom');
+        const btnReverse = document.getElementById('btnReverse');
+        const btnNearly = document.getElementById('btnNearly');
+        const speedSlider = document.getElementById('speed');
+        const speedLabel = document.getElementById('speedLabel');
+        const compareCountEl = document.getElementById('compareCount');
+        const swapCountEl = document.getElementById('swapCount');
+        const roundEl = document.getElementById('round');
+        const modeLabel = document.getElementById('modeLabel');
+        const tipLabel = document.getElementById('tipLabel');
+
+        speedSlider.addEventListener('input', () => {
+            speedLabel.textContent = speedSlider.value;
+        });
+
+        function getDelay() {
+            return 600 - (speedSlider.value - 1) * 60;
+        }
+
+        function generateArray(size) {
+            const arr = [];
+            for (let i = 0; i < size; i++) {
+                arr.push(Math.floor(Math.random() * MAX_VAL) + 1);
+            }
+            return arr;
+        }
+
+        function generateSortedArray(size) {
+            return Array.from({ length: size }, (_, index) => Math.round(((index + 1) / size) * MAX_VAL));
+        }
+
+        function generateReverseArray(size) {
+            return generateSortedArray(size).reverse();
+        }
+
+        function generateNearlySortedArray(size) {
+            const arr = generateSortedArray(size);
+            if (size > 4) {
+                [arr[1], arr[2]] = [arr[2], arr[1]];
+                [arr[size - 3], arr[size - 2]] = [arr[size - 2], arr[size - 3]];
+            }
+            return arr;
+        }
+
+        function renderBars(highlights = {}) {
+            container.innerHTML = '';
+            const maxH = 370;
+            const sortedSet = highlights.sorted || new Set();
+            const comparingSet = highlights.comparing || new Set();
+            const swappingSet = highlights.swapping || new Set();
+
+            array.forEach((val, idx) => {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = (val / MAX_VAL) * maxH + 'px';
+
+                if (sortedSet.has(idx)) {
+                    bar.classList.add('sorted');
+                } else if (swappingSet.has(idx)) {
+                    bar.classList.add('swapping');
+                } else if (highlights.current === idx) {
+                    bar.classList.add('current');
+                } else if (comparingSet.has(idx)) {
+                    bar.classList.add('comparing');
+                } else {
+                    bar.classList.add('default');
+                }
+
+                const valLabel = document.createElement('div');
+                valLabel.className = 'value';
+                valLabel.textContent = val;
+                bar.appendChild(valLabel);
+                container.appendChild(bar);
+            });
+        }
+
+        function buildStep({ arr, statusText, round, sortedSet, comparingSet, swappingSet, currentIndex, phase, compareTotal, swapTotal }) {
+            return {
+                array: [...arr],
+                statusText,
+                round,
+                phase,
+                currentIndex,
+                compareTotal,
+                swapTotal,
+                highlights: {
+                    sorted: [...sortedSet],
+                    comparing: [...comparingSet],
+                    swapping: [...swappingSet]
+                }
+            };
+        }
+
+        function generateHeapSteps(sourceArray) {
+            const arr = [...sourceArray];
+            const generatedSteps = [];
+            const n = arr.length;
+            const sortedSet = new Set();
+            let compareTotal = 0;
+            let swapTotal = 0;
+            let round = 0;
+
+            function addStep({ statusText, comparingSet, swappingSet, currentIndex, phase }) {
+                generatedSteps.push(buildStep({
+                    arr,
+                    statusText,
+                    round,
+                    sortedSet,
+                    comparingSet,
+                    swappingSet,
+                    currentIndex,
+                    phase,
+                    compareTotal,
+                    swapTotal
+                }));
+            }
+
+            function heapify(heapSize, root, stageText) {
+                let node = root;
+
+                while (true) {
+                    let largest = node;
+                    const left = 2 * node + 1;
+                    const right = 2 * node + 2;
+
+                    if (left < heapSize) {
+                        compareTotal++;
+                        addStep({
+                            statusText: `${stageText}：比較父節點 ${arr[largest]} 與左子節點 ${arr[left]}`,
+                            comparingSet: new Set([largest, left]),
+                            swappingSet: new Set(),
+                            currentIndex: largest,
+                            phase: 'comparing'
+                        });
+
+                        if (arr[left] > arr[largest]) {
+                            largest = left;
+                            addStep({
+                                statusText: `更新候選最大值為左子節點 arr[${left}]=${arr[left]}`,
+                                comparingSet: new Set([left]),
+                                swappingSet: new Set(),
+                                currentIndex: left,
+                                phase: 'comparing'
+                            });
+                        }
+                    }
+
+                    if (right < heapSize) {
+                        compareTotal++;
+                        addStep({
+                            statusText: `${stageText}：比較目前候選 ${arr[largest]} 與右子節點 ${arr[right]}`,
+                            comparingSet: new Set([largest, right]),
+                            swappingSet: new Set(),
+                            currentIndex: largest,
+                            phase: 'comparing'
+                        });
+
+                        if (arr[right] > arr[largest]) {
+                            largest = right;
+                            addStep({
+                                statusText: `更新候選最大值為右子節點 arr[${right}]=${arr[right]}`,
+                                comparingSet: new Set([right]),
+                                swappingSet: new Set(),
+                                currentIndex: right,
+                                phase: 'comparing'
+                            });
+                        }
+                    }
+
+                    if (largest !== node) {
+                        addStep({
+                            statusText: `交換 arr[${node}]=${arr[node]} 與 arr[${largest}]=${arr[largest]}，維持最大堆`,
+                            comparingSet: new Set(),
+                            swappingSet: new Set([node, largest]),
+                            currentIndex: largest,
+                            phase: 'swapping'
+                        });
+
+                        [arr[node], arr[largest]] = [arr[largest], arr[node]];
+                        swapTotal++;
+
+                        addStep({
+                            statusText: '交換完成，繼續向下調整子樹',
+                            comparingSet: new Set(),
+                            swappingSet: new Set([node, largest]),
+                            currentIndex: largest,
+                            phase: 'swapping'
+                        });
+
+                        node = largest;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+                round++;
+                addStep({
+                    statusText: `第 ${round} 輪（建堆）：從索引 ${i} 開始做堆化`,
+                    comparingSet: new Set(),
+                    swappingSet: new Set(),
+                    currentIndex: i,
+                    phase: 'start'
+                });
+
+                heapify(n, i, '建堆階段');
+
+                addStep({
+                    statusText: `第 ${round} 輪完成：索引 ${i} 的子樹已符合最大堆`,
+                    comparingSet: new Set(),
+                    swappingSet: new Set(),
+                    currentIndex: i,
+                    phase: 'round-end'
+                });
+            }
+
+            for (let end = n - 1; end > 0; end--) {
+                round++;
+                addStep({
+                    statusText: `第 ${round} 輪（取最大）：交換堆頂 ${arr[0]} 與尾端 ${arr[end]}`,
+                    comparingSet: new Set(),
+                    swappingSet: new Set([0, end]),
+                    currentIndex: 0,
+                    phase: 'start'
+                });
+
+                [arr[0], arr[end]] = [arr[end], arr[0]];
+                swapTotal++;
+                sortedSet.add(end);
+
+                addStep({
+                    statusText: `最大值已放到索引 ${end}，縮小堆積範圍後重新堆化`,
+                    comparingSet: new Set(),
+                    swappingSet: new Set([0, end]),
+                    currentIndex: 0,
+                    phase: 'swapping'
+                });
+
+                heapify(end, 0, '重建堆積');
+
+                addStep({
+                    statusText: `第 ${round} 輪完成：目前尾端 ${n - end} 個元素已排序`,
+                    comparingSet: new Set(),
+                    swappingSet: new Set(),
+                    currentIndex: 0,
+                    phase: 'round-end'
+                });
+            }
+
+            sortedSet.add(0);
+            addStep({
+                statusText: `✅ 排序完成！共 ${compareTotal} 次比較、${swapTotal} 次交換`,
+                comparingSet: new Set(),
+                swappingSet: new Set(),
+                currentIndex: -1,
+                phase: 'complete'
+            });
+
+            return generatedSteps;
+        }
+
+        function setMode(modeText, tipText) {
+            modeLabel.textContent = modeText;
+            tipLabel.textContent = tipText;
+        }
+
+        function updateStats() {
+            compareCountEl.textContent = compareCount;
+            swapCountEl.textContent = swapCount;
+        }
+
+        function clearPlaybackTimer() {
+            if (playbackTimer) {
+                clearTimeout(playbackTimer);
+                playbackTimer = null;
+            }
+        }
+
+        function syncControls() {
+            const hasSteps = steps.length > 0;
+            const atEnd = hasSteps && currentStepIndex >= steps.length - 1;
+
+            btnStart.disabled = playing || atEnd;
+            btnPause.disabled = !hasSteps || currentStepIndex < 0 || atEnd;
+            btnPause.textContent = playing ? '⏸ 暫停' : '▶ 繼續';
+            btnStep.disabled = playing || atEnd;
+            btnRoundStep.disabled = playing || atEnd;
+            btnRandom.disabled = playing;
+            btnReverse.disabled = playing;
+            btnNearly.disabled = playing;
+        }
+
+        function applyStep(index) {
+            const step = steps[index];
+            currentStepIndex = index;
+            array = [...step.array];
+            compareCount = step.compareTotal;
+            swapCount = step.swapTotal;
+            roundEl.textContent = step.round;
+            status.textContent = step.statusText;
+            updateStats();
+            renderBars({
+                sorted: new Set(step.highlights.sorted),
+                comparing: new Set(step.highlights.comparing),
+                swapping: new Set(step.highlights.swapping),
+                current: step.currentIndex
+            });
+            syncControls();
+        }
+
+        function ensureSteps() {
+            if (steps.length === 0) {
+                steps = generateHeapSteps(array);
+            }
+        }
+
+        function finishPlayback() {
+            playing = false;
+            clearPlaybackTimer();
+            document.body.classList.remove('sorting');
+
+            if (steps.length > 0 && currentStepIndex >= steps.length - 1) {
+                setMode('已完成', '可重置、切換範例或重新單步觀察');
+            }
+
+            syncControls();
+        }
+
+        function scheduleNextStep() {
+            if (!playing) {
+                return;
+            }
+
+            if (currentStepIndex >= steps.length - 1) {
+                finishPlayback();
+                return;
+            }
+
+            applyStep(currentStepIndex + 1);
+
+            if (currentStepIndex >= steps.length - 1) {
+                finishPlayback();
+                return;
+            }
+
+            clearPlaybackTimer();
+            playbackTimer = setTimeout(scheduleNextStep, getDelay());
+        }
+
+        function startPlayback() {
+            ensureSteps();
+            if (currentStepIndex >= steps.length - 1) {
+                return;
+            }
+
+            playing = true;
+            document.body.classList.add('sorting');
+            setMode('自動播放', '排序會依照目前速度持續前進，可隨時暫停');
+            syncControls();
+            scheduleNextStep();
+        }
+
+        function pausePlayback() {
+            playing = false;
+            clearPlaybackTimer();
+            document.body.classList.remove('sorting');
+            setMode('手動暫停', '可按單步或下一輪繼續分析當前流程');
+            syncControls();
+        }
+
+        function stepOnce() {
+            if (playing) {
+                return;
+            }
+
+            ensureSteps();
+            if (currentStepIndex >= steps.length - 1) {
+                return;
+            }
+
+            applyStep(currentStepIndex + 1);
+
+            if (currentStepIndex >= steps.length - 1) {
+                finishPlayback();
+            } else {
+                setMode('手動單步', '一次只推進一個比較或交換動作');
+                syncControls();
+            }
+        }
+
+        function stepRound() {
+            if (playing) {
+                return;
+            }
+
+            ensureSteps();
+            if (currentStepIndex >= steps.length - 1) {
+                return;
+            }
+
+            do {
+                applyStep(currentStepIndex + 1);
+            } while (currentStepIndex < steps.length - 1 && steps[currentStepIndex].phase !== 'round-end' && steps[currentStepIndex].phase !== 'complete');
+
+            if (currentStepIndex >= steps.length - 1) {
+                finishPlayback();
+            } else {
+                setMode('逐輪觀察', '已推進到本輪結束，可觀察建堆或取最大值結果');
+                syncControls();
+            }
+        }
+
+        function loadDataset(newArray, message, tipText) {
+            playing = false;
+            clearPlaybackTimer();
+            document.body.classList.remove('sorting');
+
+            array = [...newArray];
+            steps = [];
+            currentStepIndex = -1;
+            compareCount = 0;
+            swapCount = 0;
+            roundEl.textContent = 0;
+            status.textContent = message;
+            updateStats();
+            renderBars();
+            setMode('待機', tipText);
+            syncControls();
+        }
+
+        btnStart.addEventListener('click', startPlayback);
+
+        btnPause.addEventListener('click', () => {
+            if (playing) {
+                pausePlayback();
+            } else {
+                startPlayback();
+            }
+        });
+
+        btnStep.addEventListener('click', stepOnce);
+        btnRoundStep.addEventListener('click', stepRound);
+        btnReset.addEventListener('click', () => {
+            loadDataset(generateArray(DEFAULT_SIZE), '點擊「自動播放」或「單步」觀看動畫演示', '先觀察建堆，再看最大值被交換到尾端');
+        });
+        btnRandom.addEventListener('click', () => {
+            loadDataset(generateArray(DEFAULT_SIZE), '已產生新的隨機數列，可用單步或下一輪開始觀察', '建議先用下一輪看建堆，再用單步看局部堆化');
+        });
+        btnReverse.addEventListener('click', () => {
+            loadDataset(generateReverseArray(DEFAULT_SIZE), '已載入反向範例：可觀察最大值如何快速上浮到堆頂', '注意每輪交換後，尾端已排序區會持續擴大');
+        });
+        btnNearly.addEventListener('click', () => {
+            loadDataset(generateNearlySortedArray(DEFAULT_SIZE), '已載入幾乎排序範例：堆積排序仍需完整堆化流程', '可對照插入排序理解不同演算法對資料分布的敏感度');
+        });
+
+        loadDataset(generateArray(DEFAULT_SIZE), '點擊「自動播放」或「單步」觀看動畫演示', '先觀察建堆，再看最大值被交換到尾端');
+    </script>
+</body>
+</html>
