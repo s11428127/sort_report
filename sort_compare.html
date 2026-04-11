@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排序效能比較</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #1a1a2e;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            margin-bottom: 10px;
+            color: #0f0c29;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            text-align: center;
+        }
+
+        .info {
+            font-size: 1.03rem;
+            color: #666;
+            margin-bottom: 28px;
+            font-weight: 500;
+            text-align: center;
+            line-height: 1.5;
+            max-width: 980px;
+        }
+
+        .top-nav {
+            width: 100%;
+            max-width: 1050px;
+            margin-bottom: 20px;
+        }
+
+        .top-nav a {
+            display: inline-block;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .top-nav a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .controls {
+            width: 100%;
+            max-width: 1050px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+            padding: 18px;
+            border-radius: 14px;
+            background: #f8f9fa;
+            border: 1px solid #e0e6f2;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        input,
+        select,
+        button {
+            border: none;
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        input,
+        select {
+            border: 1px solid #d8deec;
+            background: #fff;
+            color: #1a1a2e;
+        }
+
+        button {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        #runBtn {
+            align-self: end;
+            background: linear-gradient(135deg, #00c9ff, #92fe9d);
+            color: #fff;
+            font-weight: 800;
+            box-shadow: 0 2px 10px rgba(0, 201, 255, 0.32);
+        }
+
+        #exportBtn {
+            align-self: end;
+            background: linear-gradient(135deg, #42a5f5, #478ed1);
+            color: #fff;
+            font-weight: 800;
+            box-shadow: 0 2px 10px rgba(71, 142, 209, 0.3);
+        }
+
+        #runBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 201, 255, 0.32);
+        }
+
+        #exportBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(71, 142, 209, 0.35);
+        }
+
+        #runBtn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #exportBtn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status {
+            width: 100%;
+            max-width: 1050px;
+            margin-bottom: 16px;
+            min-height: 46px;
+            padding: 12px 18px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 1050px;
+            background: #ffffff;
+            border: 1px solid #e2e8f5;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+
+        .panel h2 {
+            font-size: 1.1rem;
+            padding: 14px 16px;
+            background: #f7f9fe;
+            border-bottom: 1px solid #e2e8f5;
+            color: #263056;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 760px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid #eef2fa;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: #fbfcff;
+            color: #445077;
+            font-weight: 700;
+        }
+
+        td strong {
+            color: #0f0c29;
+        }
+
+        .muted {
+            color: #808aa8;
+            font-size: 0.9rem;
+        }
+
+        .chart {
+            padding: 14px 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .bar-row {
+            display: grid;
+            grid-template-columns: 170px 1fr 110px;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .bar-name {
+            font-size: 0.93rem;
+            color: #39456c;
+            font-weight: 700;
+        }
+
+        .bar-track {
+            width: 100%;
+            height: 20px;
+            border-radius: 999px;
+            background: #edf1fb;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            min-width: 2px;
+            transition: width 0.35s ease;
+            background: linear-gradient(90deg, #36d1dc, #5b86e5);
+        }
+
+        .bar-value {
+            text-align: right;
+            font-size: 0.9rem;
+            color: #505a79;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .note {
+            width: 100%;
+            max-width: 1050px;
+            color: #5e6786;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .bar-row {
+                grid-template-columns: 120px 1fr 90px;
+                gap: 8px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <a href="index.html">🏠 回首頁</a>
+    </div>
+
+    <h1>⏱ 排序效能比較實驗</h1>
+    <p class="info">輸入要排序的資料量 n，系統會以相同資料分別測試各排序法耗時，並用表格與長條圖比較效能差異。</p>
+
+    <div class="controls">
+        <div class="control-item">
+            <label for="nInput">資料筆數 n</label>
+            <input id="nInput" type="number" min="100" max="50000" step="100" value="5000">
+        </div>
+        <div class="control-item">
+            <label for="trialInput">重複次數</label>
+            <input id="trialInput" type="number" min="1" max="10" step="1" value="3">
+        </div>
+        <div class="control-item">
+            <label for="datasetType">資料型態</label>
+            <select id="datasetType">
+                <option value="random">隨機資料</option>
+                <option value="reverse">反向資料</option>
+                <option value="nearly">幾乎排序</option>
+            </select>
+        </div>
+        <div class="control-item">
+            <label for="scaleType">圖表比例</label>
+            <select id="scaleType">
+                <option value="log">對數比例（建議）</option>
+                <option value="linear">線性比例</option>
+            </select>
+        </div>
+        <div class="control-item">
+            <button id="runBtn">執行實驗</button>
+        </div>
+        <div class="control-item">
+            <button id="exportBtn" disabled>匯出 CSV</button>
+        </div>
+    </div>
+
+    <div class="status" id="status">準備完成，請點擊「執行實驗」。</div>
+
+    <section class="panel">
+        <h2>📋 實驗結果表</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>排序法</th>
+                        <th>時間複雜度</th>
+                        <th>平均耗時 (ms)</th>
+                        <th>相對最快倍數</th>
+                        <th>備註</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody">
+                    <tr>
+                        <td colspan="5" class="muted">尚未執行實驗。</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>📊 耗時比較圖</h2>
+        <div class="chart" id="chartArea">
+            <div class="muted">尚未有圖表資料。</div>
+        </div>
+    </section>
+
+    <p class="note" id="noteText">註：當 n 過大時，O(n^2) 演算法可能非常慢，系統會在必要時略過以避免頁面卡住。</p>
+
+    <script>
+        const nInput = document.getElementById('nInput');
+        const trialInput = document.getElementById('trialInput');
+        const datasetType = document.getElementById('datasetType');
+        const scaleType = document.getElementById('scaleType');
+        const runBtn = document.getElementById('runBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const statusEl = document.getElementById('status');
+        const resultBody = document.getElementById('resultBody');
+        const chartArea = document.getElementById('chartArea');
+        const noteText = document.getElementById('noteText');
+        let latestRows = [];
+
+        const QUADRATIC_SKIP_THRESHOLD = 12000;
+
+        const algorithms = [
+            {
+                name: '氣泡排序',
+                complexity: 'O(n^2)',
+                isQuadratic: true,
+                sort: bubbleSort
+            },
+            {
+                name: '選擇排序',
+                complexity: 'O(n^2)',
+                isQuadratic: true,
+                sort: selectionSort
+            },
+            {
+                name: '插入排序',
+                complexity: 'O(n^2)',
+                isQuadratic: true,
+                sort: insertionSort
+            },
+            {
+                name: '合併排序',
+                complexity: 'O(n log n)',
+                isQuadratic: false,
+                sort: mergeSort
+            },
+            {
+                name: '堆積排序',
+                complexity: 'O(n log n)',
+                isQuadratic: false,
+                sort: heapSort
+            }
+        ];
+
+        function bubbleSort(arr) {
+            const n = arr.length;
+            for (let i = 0; i < n - 1; i++) {
+                let swapped = false;
+                for (let j = 0; j < n - 1 - i; j++) {
+                    if (arr[j] > arr[j + 1]) {
+                        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+                        swapped = true;
+                    }
+                }
+                if (!swapped) {
+                    break;
+                }
+            }
+            return arr;
+        }
+
+        function selectionSort(arr) {
+            const n = arr.length;
+            for (let i = 0; i < n - 1; i++) {
+                let minIdx = i;
+                for (let j = i + 1; j < n; j++) {
+                    if (arr[j] < arr[minIdx]) {
+                        minIdx = j;
+                    }
+                }
+                if (minIdx !== i) {
+                    [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+                }
+            }
+            return arr;
+        }
+
+        function insertionSort(arr) {
+            for (let i = 1; i < arr.length; i++) {
+                const key = arr[i];
+                let j = i - 1;
+                while (j >= 0 && arr[j] > key) {
+                    arr[j + 1] = arr[j];
+                    j--;
+                }
+                arr[j + 1] = key;
+            }
+            return arr;
+        }
+
+        function mergeSort(arr) {
+            if (arr.length <= 1) {
+                return arr;
+            }
+
+            const mid = Math.floor(arr.length / 2);
+            const left = mergeSort(arr.slice(0, mid));
+            const right = mergeSort(arr.slice(mid));
+            return merge(left, right);
+        }
+
+        function merge(left, right) {
+            const merged = [];
+            let i = 0;
+            let j = 0;
+
+            while (i < left.length && j < right.length) {
+                if (left[i] <= right[j]) {
+                    merged.push(left[i]);
+                    i++;
+                } else {
+                    merged.push(right[j]);
+                    j++;
+                }
+            }
+
+            while (i < left.length) {
+                merged.push(left[i]);
+                i++;
+            }
+
+            while (j < right.length) {
+                merged.push(right[j]);
+                j++;
+            }
+
+            return merged;
+        }
+
+        function heapSort(arr) {
+            const n = arr.length;
+
+            for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+                heapify(arr, n, i);
+            }
+
+            for (let end = n - 1; end > 0; end--) {
+                [arr[0], arr[end]] = [arr[end], arr[0]];
+                heapify(arr, end, 0);
+            }
+            return arr;
+        }
+
+        function heapify(arr, heapSize, root) {
+            let largest = root;
+            const left = 2 * root + 1;
+            const right = 2 * root + 2;
+
+            if (left < heapSize && arr[left] > arr[largest]) {
+                largest = left;
+            }
+
+            if (right < heapSize && arr[right] > arr[largest]) {
+                largest = right;
+            }
+
+            if (largest !== root) {
+                [arr[root], arr[largest]] = [arr[largest], arr[root]];
+                heapify(arr, heapSize, largest);
+            }
+        }
+
+        function generateDataset(n, type) {
+            const sorted = Array.from({ length: n }, (_, idx) => idx + 1);
+
+            if (type === 'reverse') {
+                return [...sorted].reverse();
+            }
+
+            if (type === 'nearly') {
+                const arr = [...sorted];
+                const swaps = Math.max(2, Math.floor(n * 0.02));
+                for (let i = 0; i < swaps; i++) {
+                    const a = Math.floor(Math.random() * n);
+                    const b = Math.floor(Math.random() * n);
+                    [arr[a], arr[b]] = [arr[b], arr[a]];
+                }
+                return arr;
+            }
+
+            const arr = [];
+            for (let i = 0; i < n; i++) {
+                arr.push(Math.floor(Math.random() * n) + 1);
+            }
+            return arr;
+        }
+
+        function isSorted(arr) {
+            for (let i = 1; i < arr.length; i++) {
+                if (arr[i - 1] > arr[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function toMsText(value) {
+            return value.toFixed(3);
+        }
+
+        function toRatioText(value) {
+            return value.toFixed(2) + 'x';
+        }
+
+        async function runBenchmark() {
+            const n = Number(nInput.value);
+            const trials = Number(trialInput.value);
+            const type = datasetType.value;
+            const scale = scaleType.value;
+
+            if (!Number.isInteger(n) || n < 100 || n > 50000) {
+                statusEl.textContent = '請輸入 100 到 50000 的整數 n。';
+                return;
+            }
+
+            if (!Number.isInteger(trials) || trials < 1 || trials > 10) {
+                statusEl.textContent = '重複次數請輸入 1 到 10。';
+                return;
+            }
+
+            runBtn.disabled = true;
+            statusEl.textContent = '正在產生測試資料...';
+            resultBody.innerHTML = '<tr><td colspan="5" class="muted">實驗中，請稍候...</td></tr>';
+            chartArea.innerHTML = '<div class="muted">實驗中，圖表建立中...</div>';
+            exportBtn.disabled = true;
+
+            const baseArray = generateDataset(n, type);
+            const rows = [];
+
+            for (let i = 0; i < algorithms.length; i++) {
+                const algo = algorithms[i];
+
+                if (algo.isQuadratic && n > QUADRATIC_SKIP_THRESHOLD) {
+                    rows.push({
+                        name: algo.name,
+                        complexity: algo.complexity,
+                        average: null,
+                        ratio: null,
+                        note: `n > ${QUADRATIC_SKIP_THRESHOLD}，為避免卡住已略過`
+                    });
+                    continue;
+                }
+
+                statusEl.textContent = `正在測試 ${algo.name} (${i + 1}/${algorithms.length})...`;
+                await new Promise((resolve) => setTimeout(resolve, 0));
+
+                let total = 0;
+                let valid = true;
+
+                for (let t = 0; t < trials; t++) {
+                    const arr = baseArray.slice();
+                    const start = performance.now();
+                    const sorted = algo.sort(arr.slice());
+                    const end = performance.now();
+                    total += (end - start);
+
+                    const verifyArray = Array.isArray(sorted) ? sorted : arr;
+                    if (!isSorted(verifyArray)) {
+                        valid = false;
+                        break;
+                    }
+                }
+
+                if (!valid) {
+                    rows.push({
+                        name: algo.name,
+                        complexity: algo.complexity,
+                        average: null,
+                        ratio: null,
+                        note: '排序結果驗證失敗'
+                    });
+                } else {
+                    rows.push({
+                        name: algo.name,
+                        complexity: algo.complexity,
+                        average: total / trials,
+                        ratio: null,
+                        note: '測試完成'
+                    });
+                }
+            }
+
+            const completed = rows.filter((r) => typeof r.average === 'number');
+            if (completed.length > 0) {
+                const fastest = Math.min(...completed.map((r) => r.average));
+                rows.forEach((r) => {
+                    if (typeof r.average === 'number') {
+                        r.ratio = r.average / fastest;
+                    }
+                });
+            }
+
+            latestRows = rows;
+
+            renderTable(rows);
+            renderChart(rows, scale);
+
+            const completedCount = completed.length;
+            statusEl.textContent = `實驗完成：n=${n}、重複 ${trials} 次、完成 ${completedCount}/${algorithms.length} 種排序法。`;
+            noteText.textContent = `註：圖表可切換線性或對數比例。對數比例較容易觀察快慢差距很大的演算法。`; 
+
+            exportBtn.disabled = false;
+            runBtn.disabled = false;
+        }
+
+        function csvEscape(value) {
+            const text = String(value ?? '');
+            if (text.includes('"') || text.includes(',') || text.includes('\n')) {
+                return '"' + text.replace(/"/g, '""') + '"';
+            }
+            return text;
+        }
+
+        function exportCSV() {
+            if (latestRows.length === 0) {
+                statusEl.textContent = '目前沒有可匯出的資料，請先執行實驗。';
+                return;
+            }
+
+            const n = Number(nInput.value);
+            const trials = Number(trialInput.value);
+            const datasetLabels = {
+                random: '隨機資料',
+                reverse: '反向資料',
+                nearly: '幾乎排序'
+            };
+
+            const lines = [
+                ['資料筆數 n', n],
+                ['重複次數', trials],
+                ['資料型態', datasetLabels[datasetType.value] || datasetType.value],
+                [''],
+                ['排序法', '時間複雜度', '平均耗時(ms)', '相對最快倍數', '備註']
+            ];
+
+            latestRows.forEach((row) => {
+                lines.push([
+                    row.name,
+                    row.complexity,
+                    typeof row.average === 'number' ? row.average.toFixed(3) : '-',
+                    typeof row.ratio === 'number' ? row.ratio.toFixed(2) + 'x' : '-',
+                    row.note
+                ]);
+            });
+
+            const csv = lines
+                .map((line) => line.map(csvEscape).join(','))
+                .join('\n');
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const time = new Date().toISOString().replace(/[:.]/g, '-');
+            link.href = url;
+            link.download = `sort_benchmark_n${n}_${time}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+
+            statusEl.textContent = 'CSV 匯出完成，檔案已下載。';
+        }
+
+        function renderTable(rows) {
+            if (rows.length === 0) {
+                resultBody.innerHTML = '<tr><td colspan="5" class="muted">無資料</td></tr>';
+                return;
+            }
+
+            resultBody.innerHTML = rows
+                .map((r) => {
+                    const avgText = typeof r.average === 'number' ? `<strong>${toMsText(r.average)}</strong>` : '<span class="muted">-</span>';
+                    const ratioText = typeof r.ratio === 'number' ? toRatioText(r.ratio) : '<span class="muted">-</span>';
+
+                    return `<tr>
+                        <td>${r.name}</td>
+                        <td>${r.complexity}</td>
+                        <td>${avgText}</td>
+                        <td>${ratioText}</td>
+                        <td>${r.note}</td>
+                    </tr>`;
+                })
+                .join('');
+        }
+
+        function renderChart(rows, scale) {
+            const completed = rows.filter((r) => typeof r.average === 'number');
+            if (completed.length === 0) {
+                chartArea.innerHTML = '<div class="muted">沒有可繪製的有效資料。</div>';
+                return;
+            }
+
+            const values = completed.map((r) => r.average);
+            const maxVal = Math.max(...values);
+            const maxLog = Math.max(...values.map((v) => Math.log10(v + 1)));
+
+            chartArea.innerHTML = completed
+                .map((r) => {
+                    const percent = scale === 'linear'
+                        ? (r.average / maxVal) * 100
+                        : (Math.log10(r.average + 1) / maxLog) * 100;
+
+                    return `<div class="bar-row">
+                        <div class="bar-name">${r.name}</div>
+                        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, percent).toFixed(2)}%"></div></div>
+                        <div class="bar-value">${toMsText(r.average)} ms</div>
+                    </div>`;
+                })
+                .join('');
+        }
+
+        runBtn.addEventListener('click', runBenchmark);
+        exportBtn.addEventListener('click', exportCSV);
+        scaleType.addEventListener('change', () => {
+            if (latestRows.length > 0) {
+                renderChart(latestRows, scaleType.value);
+            }
+        });
+    </script>
+</body>
+</html>
