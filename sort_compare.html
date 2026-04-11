@@ -225,7 +225,7 @@
 
         .bar-row {
             display: grid;
-            grid-template-columns: 170px 1fr 110px;
+            grid-template-columns: 140px 1fr 320px;
             gap: 10px;
             align-items: center;
         }
@@ -238,15 +238,19 @@
 
         .bar-track {
             width: 100%;
-            height: 20px;
-            border-radius: 999px;
+            min-height: 70px;
+            border-radius: 12px;
             background: #edf1fb;
             overflow: hidden;
             position: relative;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .bar-fill {
-            height: 100%;
+            height: 8px;
             border-radius: 999px;
             min-width: 2px;
             transition: width 0.35s ease;
@@ -254,10 +258,11 @@
         }
 
         .bar-value {
-            text-align: right;
-            font-size: 0.9rem;
+            text-align: left;
+            font-size: 0.8rem;
             color: #505a79;
             font-variant-numeric: tabular-nums;
+            line-height: 1.4;
         }
 
         .note {
@@ -271,8 +276,12 @@
 
         @media (max-width: 768px) {
             .bar-row {
-                grid-template-columns: 120px 1fr 90px;
+                grid-template-columns: 100px 1fr;
                 gap: 8px;
+            }
+
+            .bar-value {
+                grid-column: 1 / -1;
             }
 
             h1 {
@@ -287,12 +296,12 @@
     </div>
 
     <h1>⏱ 排序效能比較實驗</h1>
-    <p class="info">輸入要排序的資料量 n，系統會以相同資料分別測試各排序法耗時，並用表格與長條圖比較效能差異。</p>
+    <p class="info">輸入多個不同規模的 n（以逗號分隔），系統會在每個 n 下測試各排序法，並整理成表格與趨勢圖觀察 n 增加時的耗時變化。</p>
 
     <div class="controls">
         <div class="control-item">
-            <label for="nInput">資料筆數 n</label>
-            <input id="nInput" type="number" min="100" max="50000" step="100" value="5000">
+            <label for="nListInput">資料規模 n 清單</label>
+            <input id="nListInput" type="text" value="500,1000,2000,5000,10000">
         </div>
         <div class="control-item">
             <label for="trialInput">重複次數</label>
@@ -324,21 +333,20 @@
     <div class="status" id="status">準備完成，請點擊「執行實驗」。</div>
 
     <section class="panel">
-        <h2>📋 實驗結果表</h2>
+        <h2>📋 不同 n 規模結果表</h2>
         <div class="table-wrap">
             <table>
-                <thead>
+                <thead id="resultHead">
                     <tr>
                         <th>排序法</th>
                         <th>時間複雜度</th>
-                        <th>平均耗時 (ms)</th>
-                        <th>相對最快倍數</th>
+                        <th>結果</th>
                         <th>備註</th>
                     </tr>
                 </thead>
                 <tbody id="resultBody">
                     <tr>
-                        <td colspan="5" class="muted">尚未執行實驗。</td>
+                        <td colspan="4" class="muted">尚未執行實驗。</td>
                     </tr>
                 </tbody>
             </table>
@@ -346,7 +354,7 @@
     </section>
 
     <section class="panel">
-        <h2>📊 耗時比較圖</h2>
+        <h2>📈 n 增長趨勢圖</h2>
         <div class="chart" id="chartArea">
             <div class="muted">尚未有圖表資料。</div>
         </div>
@@ -355,17 +363,19 @@
     <p class="note" id="noteText">註：當 n 過大時，O(n^2) 演算法可能非常慢，系統會在必要時略過以避免頁面卡住。</p>
 
     <script>
-        const nInput = document.getElementById('nInput');
+        const nListInput = document.getElementById('nListInput');
         const trialInput = document.getElementById('trialInput');
         const datasetType = document.getElementById('datasetType');
         const scaleType = document.getElementById('scaleType');
         const runBtn = document.getElementById('runBtn');
         const exportBtn = document.getElementById('exportBtn');
         const statusEl = document.getElementById('status');
+        const resultHead = document.getElementById('resultHead');
         const resultBody = document.getElementById('resultBody');
         const chartArea = document.getElementById('chartArea');
         const noteText = document.getElementById('noteText');
         let latestRows = [];
+        let latestSizes = [];
 
         const QUADRATIC_SKIP_THRESHOLD = 12000;
 
@@ -562,14 +572,30 @@
             return value.toFixed(2) + 'x';
         }
 
+        function parseSizes(text) {
+            const raw = text.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+            const parsed = [];
+            for (const item of raw) {
+                const value = Number(item);
+                if (!Number.isInteger(value) || value < 100 || value > 50000) {
+                    return null;
+                }
+                if (!parsed.includes(value)) {
+                    parsed.push(value);
+                }
+            }
+            parsed.sort((a, b) => a - b);
+            return parsed.length > 0 ? parsed : null;
+        }
+
         async function runBenchmark() {
-            const n = Number(nInput.value);
+            const sizes = parseSizes(nListInput.value);
             const trials = Number(trialInput.value);
             const type = datasetType.value;
             const scale = scaleType.value;
 
-            if (!Number.isInteger(n) || n < 100 || n > 50000) {
-                statusEl.textContent = '請輸入 100 到 50000 的整數 n。';
+            if (!sizes) {
+                statusEl.textContent = '請輸入有效的 n 清單（例如 500,1000,2000），且每個值需介於 100 到 50000。';
                 return;
             }
 
@@ -580,84 +606,67 @@
 
             runBtn.disabled = true;
             statusEl.textContent = '正在產生測試資料...';
-            resultBody.innerHTML = '<tr><td colspan="5" class="muted">實驗中，請稍候...</td></tr>';
+            resultHead.innerHTML = '<tr><th>排序法</th><th>時間複雜度</th><th>結果</th><th>備註</th></tr>';
+            resultBody.innerHTML = '<tr><td colspan="4" class="muted">實驗中，請稍候...</td></tr>';
             chartArea.innerHTML = '<div class="muted">實驗中，圖表建立中...</div>';
             exportBtn.disabled = true;
 
-            const baseArray = generateDataset(n, type);
-            const rows = [];
+            const rows = algorithms.map((algo) => ({
+                name: algo.name,
+                complexity: algo.complexity,
+                note: '測試完成',
+                results: {}
+            }));
 
-            for (let i = 0; i < algorithms.length; i++) {
-                const algo = algorithms[i];
+            for (let s = 0; s < sizes.length; s++) {
+                const n = sizes[s];
+                const baseArray = generateDataset(n, type);
 
-                if (algo.isQuadratic && n > QUADRATIC_SKIP_THRESHOLD) {
-                    rows.push({
-                        name: algo.name,
-                        complexity: algo.complexity,
-                        average: null,
-                        ratio: null,
-                        note: `n > ${QUADRATIC_SKIP_THRESHOLD}，為避免卡住已略過`
-                    });
-                    continue;
-                }
+                for (let i = 0; i < algorithms.length; i++) {
+                    const algo = algorithms[i];
+                    const row = rows[i];
 
-                statusEl.textContent = `正在測試 ${algo.name} (${i + 1}/${algorithms.length})...`;
-                await new Promise((resolve) => setTimeout(resolve, 0));
+                    if (algo.isQuadratic && n > QUADRATIC_SKIP_THRESHOLD) {
+                        row.results[n] = null;
+                        row.note = `含 n > ${QUADRATIC_SKIP_THRESHOLD}，部分規模略過`;
+                        continue;
+                    }
 
-                let total = 0;
-                let valid = true;
+                    statusEl.textContent = `正在測試 ${algo.name}（n=${n}，${s + 1}/${sizes.length}）...`;
+                    await new Promise((resolve) => setTimeout(resolve, 0));
 
-                for (let t = 0; t < trials; t++) {
-                    const arr = baseArray.slice();
-                    const start = performance.now();
-                    const sorted = algo.sort(arr.slice());
-                    const end = performance.now();
-                    total += (end - start);
+                    let total = 0;
+                    let valid = true;
 
-                    const verifyArray = Array.isArray(sorted) ? sorted : arr;
-                    if (!isSorted(verifyArray)) {
-                        valid = false;
-                        break;
+                    for (let t = 0; t < trials; t++) {
+                        const start = performance.now();
+                        const sorted = algo.sort(baseArray.slice());
+                        const end = performance.now();
+                        total += (end - start);
+
+                        const verifyArray = Array.isArray(sorted) ? sorted : baseArray;
+                        if (!isSorted(verifyArray)) {
+                            valid = false;
+                            break;
+                        }
+                    }
+
+                    if (!valid) {
+                        row.results[n] = null;
+                        row.note = '排序結果驗證失敗';
+                    } else {
+                        row.results[n] = total / trials;
                     }
                 }
-
-                if (!valid) {
-                    rows.push({
-                        name: algo.name,
-                        complexity: algo.complexity,
-                        average: null,
-                        ratio: null,
-                        note: '排序結果驗證失敗'
-                    });
-                } else {
-                    rows.push({
-                        name: algo.name,
-                        complexity: algo.complexity,
-                        average: total / trials,
-                        ratio: null,
-                        note: '測試完成'
-                    });
-                }
             }
-
-            const completed = rows.filter((r) => typeof r.average === 'number');
-            if (completed.length > 0) {
-                const fastest = Math.min(...completed.map((r) => r.average));
-                rows.forEach((r) => {
-                    if (typeof r.average === 'number') {
-                        r.ratio = r.average / fastest;
-                    }
-                });
-            }
-
+            latestSizes = sizes;
             latestRows = rows;
 
-            renderTable(rows);
-            renderChart(rows, scale);
+            renderTable(rows, sizes);
+            renderChart(rows, sizes, scale);
 
-            const completedCount = completed.length;
-            statusEl.textContent = `實驗完成：n=${n}、重複 ${trials} 次、完成 ${completedCount}/${algorithms.length} 種排序法。`;
-            noteText.textContent = `註：圖表可切換線性或對數比例。對數比例較容易觀察快慢差距很大的演算法。`; 
+            statusEl.textContent = `實驗完成：規模 n = ${sizes.join(', ')}，每個規模重複 ${trials} 次。`;
+            noteText.textContent = '註：同一排序法若曲線上升很快，代表 n 增加時耗時成長更明顯。可切換線性/對數比例比較趨勢。';
 
             exportBtn.disabled = false;
             runBtn.disabled = false;
@@ -677,7 +686,11 @@
                 return;
             }
 
-            const n = Number(nInput.value);
+            if (latestSizes.length === 0) {
+                statusEl.textContent = '目前沒有可匯出的資料，請先執行實驗。';
+                return;
+            }
+
             const trials = Number(trialInput.value);
             const datasetLabels = {
                 random: '隨機資料',
@@ -686,19 +699,21 @@
             };
 
             const lines = [
-                ['資料筆數 n', n],
+                ['資料規模 n 清單', latestSizes.join(',')],
                 ['重複次數', trials],
                 ['資料型態', datasetLabels[datasetType.value] || datasetType.value],
                 [''],
-                ['排序法', '時間複雜度', '平均耗時(ms)', '相對最快倍數', '備註']
+                ['排序法', '時間複雜度', ...latestSizes.map((n) => `n=${n}(ms)`), '備註']
             ];
 
             latestRows.forEach((row) => {
                 lines.push([
                     row.name,
                     row.complexity,
-                    typeof row.average === 'number' ? row.average.toFixed(3) : '-',
-                    typeof row.ratio === 'number' ? row.ratio.toFixed(2) + 'x' : '-',
+                    ...latestSizes.map((n) => {
+                        const value = row.results[n];
+                        return typeof value === 'number' ? value.toFixed(3) : '-';
+                    }),
                     row.note
                 ]);
             });
@@ -712,7 +727,7 @@
             const link = document.createElement('a');
             const time = new Date().toISOString().replace(/[:.]/g, '-');
             link.href = url;
-            link.download = `sort_benchmark_n${n}_${time}.csv`;
+            link.download = `sort_benchmark_multi_n_${time}.csv`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -721,49 +736,76 @@
             statusEl.textContent = 'CSV 匯出完成，檔案已下載。';
         }
 
-        function renderTable(rows) {
+        function renderTable(rows, sizes) {
             if (rows.length === 0) {
-                resultBody.innerHTML = '<tr><td colspan="5" class="muted">無資料</td></tr>';
+                resultBody.innerHTML = '<tr><td colspan="4" class="muted">無資料</td></tr>';
                 return;
             }
 
+            resultHead.innerHTML = `<tr>
+                <th>排序法</th>
+                <th>時間複雜度</th>
+                ${sizes.map((n) => `<th>n=${n} (ms)</th>`).join('')}
+                <th>備註</th>
+            </tr>`;
+
             resultBody.innerHTML = rows
                 .map((r) => {
-                    const avgText = typeof r.average === 'number' ? `<strong>${toMsText(r.average)}</strong>` : '<span class="muted">-</span>';
-                    const ratioText = typeof r.ratio === 'number' ? toRatioText(r.ratio) : '<span class="muted">-</span>';
+                    const cells = sizes.map((n) => {
+                        const value = r.results[n];
+                        return typeof value === 'number'
+                            ? `<td><strong>${toMsText(value)}</strong></td>`
+                            : '<td><span class="muted">-</span></td>';
+                    }).join('');
 
                     return `<tr>
                         <td>${r.name}</td>
                         <td>${r.complexity}</td>
-                        <td>${avgText}</td>
-                        <td>${ratioText}</td>
+                        ${cells}
                         <td>${r.note}</td>
                     </tr>`;
                 })
                 .join('');
         }
 
-        function renderChart(rows, scale) {
-            const completed = rows.filter((r) => typeof r.average === 'number');
+        function renderChart(rows, sizes, scale) {
+            const allValues = [];
+            rows.forEach((r) => {
+                sizes.forEach((n) => {
+                    const v = r.results[n];
+                    if (typeof v === 'number') {
+                        allValues.push(v);
+                    }
+                });
+            });
+
+            const completed = rows.filter((r) => sizes.some((n) => typeof r.results[n] === 'number'));
             if (completed.length === 0) {
                 chartArea.innerHTML = '<div class="muted">沒有可繪製的有效資料。</div>';
                 return;
             }
 
-            const values = completed.map((r) => r.average);
-            const maxVal = Math.max(...values);
-            const maxLog = Math.max(...values.map((v) => Math.log10(v + 1)));
+            const maxVal = Math.max(...allValues);
+            const maxLog = Math.max(...allValues.map((v) => Math.log10(v + 1)));
 
             chartArea.innerHTML = completed
                 .map((r) => {
-                    const percent = scale === 'linear'
-                        ? (r.average / maxVal) * 100
-                        : (Math.log10(r.average + 1) / maxLog) * 100;
-
                     return `<div class="bar-row">
                         <div class="bar-name">${r.name}</div>
-                        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, percent).toFixed(2)}%"></div></div>
-                        <div class="bar-value">${toMsText(r.average)} ms</div>
+                        <div class="bar-track">${sizes.map((n) => {
+                            const value = r.results[n];
+                            if (typeof value !== 'number') {
+                                return '<div class="bar-fill" style="width:2%;opacity:0.12"></div>';
+                            }
+                            const percent = scale === 'linear'
+                                ? (value / maxVal) * 100
+                                : (Math.log10(value + 1) / maxLog) * 100;
+                            return `<div class="bar-fill" title="n=${n}, ${toMsText(value)} ms" style="width:${Math.max(2, percent).toFixed(2)}%;margin-bottom:2px"></div>`;
+                        }).join('')}</div>
+                        <div class="bar-value">${sizes.map((n) => {
+                            const value = r.results[n];
+                            return `n=${n}:${typeof value === 'number' ? toMsText(value) : '-'}ms`;
+                        }).join(' | ')}</div>
                     </div>`;
                 })
                 .join('');
@@ -772,8 +814,8 @@
         runBtn.addEventListener('click', runBenchmark);
         exportBtn.addEventListener('click', exportCSV);
         scaleType.addEventListener('change', () => {
-            if (latestRows.length > 0) {
-                renderChart(latestRows, scaleType.value);
+            if (latestRows.length > 0 && latestSizes.length > 0) {
+                renderChart(latestRows, latestSizes, scaleType.value);
             }
         });
     </script>
