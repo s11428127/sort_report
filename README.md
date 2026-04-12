@@ -37,6 +37,49 @@
 
 <img width="528" height="283" alt="image" src="https://github.com/user-attachments/assets/cf56d799-ac2c-41f5-a1e4-54edf844e4ba" />
 
+## 綜合比較
+二、 複雜度分析
+以下為五種排序演算法的時間複雜度（Time Complexity）與空間複雜度（Space Complexity）比較：
+排序演算法
+最佳時間複雜度
+平均時間複雜度
+最差時間複雜度
+空間複雜度
+穩定性
+氣泡排序 (Bubble)
+O(n)
+O(n²)
+O(n²)
+O(1)
+穩定
+選擇排序 (Selection)
+O(n²)
+O(n²)
+O(n²)
+O(1)
+不穩定
+插入排序 (Insertion)
+O(n)
+O(n²)
+O(n²)
+O(1)
+穩定
+合併排序 (Merge)
+O(n log n)
+O(n log n)
+O(n log n)
+O(n)
+穩定
+堆積排序 (Heap)
+O(n log n)
+O(n log n)
+O(n log n)
+O(1)
+不穩定
+
+(註：最佳時間複雜度 O(n) 通常發生在陣列已經是排序好的狀態，且演算法有做提前結束的優化，例如氣泡與插入排序。)
+
+
 
 
 
